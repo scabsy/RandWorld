@@ -5,6 +5,7 @@
 -----------------------------------------------------------------------------------------
 
 local composer = require( "composer" )
+local perspective = require( "perspective" )
 local scene = composer.newScene()
 
 -- include Corona's "physics" library
@@ -32,6 +33,9 @@ player.dir = ""
 --world
 local World={}
 local BlockTypes={"d","g","s"}
+
+--camera
+local camera = perspective.createView()
 ----------------------------------------------------------------------------------------------------------------
 
 ----------------------------------SHARE FUNCTIONS---------------------------------------------------------------
@@ -53,7 +57,7 @@ end
 function pCrouch()
 	-- physics.removeBody(player)
 	player.height=pSize*.7
-	physics.addBody(player,"dynamic",{bounce=0})
+	-- physics.addBody(player,"dynamic",{bounce=0})
 	-- player.isFixedRotation=true	
 	-- player.gravityScale=6
 end
@@ -61,7 +65,7 @@ end
 function pStandUp()
 	-- physics.removeBody(player)
 	player.height=pSize
-	physics.addBody(player,"dynamic",{bounce=0})
+	-- physics.addBody(player,"dynamic",{bounce=0})
 	-- player.isFixedRotation=true	
 	-- player.gravityScale=3
 end
@@ -230,6 +234,10 @@ function sleep(n)  -- seconds
 	local t0 = clock()
 	while clock() - t0 <= n do end
 end
+
+-- function FollowPlayer()
+	-- scene
+-- end
 ----------------------------------------------------------------------------------------------------------------
 
 
@@ -240,7 +248,10 @@ function scene:create( event )
 
 	-- We need physics started to add bodies, but we don't want the simulaton
 	-- running until the scene is on the screen.
+	--load map
 	LoadWorld()
+	
+	
 	physics.addBody(player,"dynamic",{bounce=0})	
 	player.isFixedRotation=true	
 	player.gravityScale=3
