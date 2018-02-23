@@ -88,22 +88,25 @@ function GenerateWorld()
 		height=height + math.random(-2,2)
 		if height<1 then height = 1 end
 		for j=1,height do
-			World[i][j]=BlockTypes[math.random(#BlockTypes)]
-			print(World[i][j])
+			local blkType = BlockTypes[math.random(#BlockTypes)]
+			World[i][j]=blkType
 			-- World[i][j]=display.newRect(0,0,85,85)
 			-- World[i][j].blockType="d"
 			-- World[i][j].x,World[i][j].y = i*85,screenH-j*85
 			-- physics.addBody(World[i][j],"static",{bounce=0})
 		end
 	end
-	
+	print(#World)
 	CreateWorld(World)
 end
 
-function CreateWorld(worldArray)
+function CreateWorld(worldArray)	
 	for i=1,#World do
 		for j=1,#World[i] do
 			local tmpBlkType = World[i][j]
+			--World[i][j]=nil
+			if type(tmpBlkType)~= "table"  then 
+			print("A::" .. tmpBlkType)
 			World[i][j]=display.newRect(0,0,85,85)
 			World[i][j].blockType=tmpBlkType
 			World[i][j].x,World[i][j].y = i*85,screenH-j*85
@@ -111,13 +114,14 @@ function CreateWorld(worldArray)
 			if World[i][j].blockType=="g" then
 				World[i][j]:setFillColor(0,1,0)
 			elseif World[i][j].blockType=="d" then
-				World[i][j]:setFillColor(1,1,0)
+				World[i][j]:setFillColor(1,0,1)
 			elseif World[i][j].blockType=="s" then
 				World[i][j]:setFillColor(.4,.4,.4)
 			end
+			end
 		end
-	end
-	
+		print("end line")
+	end	
 	
 	SaveWorld()
 end
@@ -133,7 +137,9 @@ function SaveWorld()
 			--print("kajsdc" .. World[i][j].blockType)
 				file:write(World[i][j].blockType)
 			end
-			file:write("\n")
+			if i<#World then
+				file:write("\n")
+			end
 		end
 		io.close(file)
 	end
@@ -147,17 +153,20 @@ function LoadWorld()
 		print("File error: " .. errorString)
 		GenerateWorld()
 	else
+		World={}
 		for i=1,22 do
 			local line = file:read("*l")
-			print(string.len(line))
-			World[i]={}
-			for j=1,string.len(line) do
-				-- World[i][j]=display.newRect(0,0,85,85)
-				-- World[i][j].blockType="d"
-				-- World[i][j].x,World[i][j].y = i*85,screenH-j*85
-				-- physics.addBody(World[i][j],"static",{bounce=0})
-				
-				World[i][j]=line:sub(j,j+1)--string.sub(
+			if string.len(line) > 0 then
+				print(string.len(line))
+				World[i]={}
+				for j=1,string.len(line) do
+					-- World[i][j]=display.newRect(0,0,85,85)
+					-- World[i][j].blockType="d"
+					-- World[i][j].x,World[i][j].y = i*85,screenH-j*85
+					-- physics.addBody(World[i][j],"static",{bounce=0})
+					
+					World[i][j]=line:sub(j,j)--string.sub(
+				end
 			end
 		end
 		io.close(file)
@@ -235,9 +244,7 @@ function scene:create( event )
 	physics.addBody(player,"dynamic",{bounce=0})	
 	player.isFixedRotation=true	
 	player.gravityScale=3
-	--pResetPhysics()	
-	
-	print(World[4].blockType)
+	--pResetPhysics()
 	
 	sceneGroup:insert(player)
 end
