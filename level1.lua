@@ -1,3 +1,17 @@
+-- TO DO
+-- ****************level loading
+-- load section as player walks
+-- save any changes from mining to file as player leave area
+
+-- ****************mining
+-- make each block mineable (click within distance, block has health)
+-- inventory
+
+-- ****************crafting system
+-- make recipes for certain things (3x3 grid)
+-- ui to craft
+
+
 -----------------------------------------------------------------------------------------
 --
 -- level1.lua
@@ -32,9 +46,12 @@ player.dir = ""
 
 --world
 local World={}
+local WorldDisplay = {}
 local BlockTypes={"d","g","s"}
 local blockSize = 84
 local levelWidth = 100
+local currentSection = 3
+local sectionSize = 25
 
 --camera
 local camera = perspective.createView()
@@ -103,25 +120,28 @@ function GenerateWorld()
 end
 
 function CreateWorld(worldArray)	
-	for i=1,#World do
+	-- for i=1,#World do
+	local wdNum = 1
+	for i=((currentSection-1)*sectionSize)+1,((currentSection-1)*sectionSize)+1+sectionSize do
+		WorldDisplay[wdNum]={}
 		for j=1,#World[i] do
 			local tmpBlkType = World[i][j]
 			--World[i][j]=nil
 			if type(tmpBlkType)~= "table"  then 
-			print("A::" .. tmpBlkType)
-			World[i][j]=display.newRect(0,0,blockSize,blockSize)
-			World[i][j].blockType=tmpBlkType
-			World[i][j].x,World[i][j].y = (i*blockSize)-blockSize/2,(screenH-j*blockSize)+blockSize/2
-			physics.addBody(World[i][j],"static",{bounce=0})
-			if World[i][j].blockType=="g" then
-				World[i][j]:setFillColor(0,1,0)
-			elseif World[i][j].blockType=="d" then
-				World[i][j]:setFillColor(1,0,1)
-			elseif World[i][j].blockType=="s" then
-				World[i][j]:setFillColor(.4,.4,.4)
-			end
+				WorldDisplay[wdNum][j]=display.newRect(0,0,blockSize,blockSize)
+				WorldDisplay[wdNum][j].blockType=tmpBlkType
+				WorldDisplay[wdNum][j].x,WorldDisplay[wdNum][j].y = (i*blockSize)-blockSize/2,(screenH-j*blockSize)+blockSize/2
+				physics.addBody(WorldDisplay[wdNum][j],"static",{bounce=0})
+				if WorldDisplay[wdNum][j].blockType=="g" then
+					WorldDisplay[wdNum][j]:setFillColor(0,1,0)
+				elseif WorldDisplay[wdNum][j].blockType=="d" then
+					WorldDisplay[wdNum][j]:setFillColor(1,0,1)
+				elseif WorldDisplay[wdNum][j].blockType=="s" then
+					WorldDisplay[wdNum][j]:setFillColor(.4,.4,.4)
+				end
 			end
 		end
+		wdNum = wdNum+1
 		print("end line")
 	end	
 	
@@ -136,7 +156,7 @@ function SaveWorld()
 	else		
 		for i=1,#World do
 			for j=1,#World[i] do
-				file:write(World[i][j].blockType)
+				file:write(World[i][j])
 			end
 			if i<#World then
 				file:write("\n")
@@ -155,15 +175,23 @@ function LoadWorld()
 		GenerateWorld()
 	else
 		World={}
-		for i=1,levelWidth do
+		local lineN = 0
+		for i=1,levelWidth do			
 			local line = file:read("*l")
-			if string.len(line) > 0 then
-				print(string.len(line))
-				World[i]={}
-				for j=1,string.len(line) do
-					World[i][j]=line:sub(j,j)
+			-- lineN=lineN+1
+			-- if lineN >= currentSection*sectionSize then
+				-- if lineN > currentSection*sectionSize + sectionSize then
+					-- break
+				-- end
+				
+				if string.len(line) > 0 then
+					print(string.len(line))
+					World[i]={}
+					for j=1,string.len(line) do
+						World[i][j]=line:sub(j,j)
+					end
 				end
-			end
+			-- end
 		end
 		io.close(file)
 	end
@@ -247,13 +275,15 @@ function scene:create( event )
 	physics.addBody(player,"dynamic",{bounce=0})	
 	player.isFixedRotation=true	
 	player.gravityScale=3
-	player.x, player.y = blockSize/2,-#World[1]*blockSize+screenH
+	player.x, player.y = WorldDisplay[1][1].x,-#WorldDisplay[1]*blockSize+screenH
+	-- player.x, player.y = (sectionSize*currentSection*blockSize),-#World[1]*blockSize+screenH
 	--pResetPhysics()
 	
 	camera:add(player,1)
-	for i=1,#World do
-		for j=1,#World[i] do
-			camera:add(World[i][j],2)
+	-- for i=1,#World do
+	for i=1,sectionSize do
+		for j=1,#WorldDisplay[i] do
+			camera:add(WorldDisplay[i][j],2)
 		end
 	end
 	
