@@ -24,7 +24,7 @@ local pSize = 80
 local pSpeed = 5
 local pJumpHeight = -.7
 
-local player=display.newRect(screenW/2,screenH-450,pSize*.7,pSize)
+local player=display.newRect(0,0,pSize*.7,pSize)
 player.anchorY=1
 player:setFillColor(1,0,0)
 player.posDirs = {"L","R"}
@@ -33,6 +33,8 @@ player.dir = ""
 --world
 local World={}
 local BlockTypes={"d","g","s"}
+local blockSize = 84
+local levelWidth = 100
 
 --camera
 local camera = perspective.createView()
@@ -86,18 +88,14 @@ end
 
 -----------world
 function GenerateWorld()
-	local height = 5
-	for i=1,22 do
+	local height = 25
+	for i=1,levelWidth do
 		World[i]={}
 		height=height + math.random(-2,2)
 		if height<1 then height = 1 end
 		for j=1,height do
 			local blkType = BlockTypes[math.random(#BlockTypes)]
 			World[i][j]=blkType
-			-- World[i][j]=display.newRect(0,0,85,85)
-			-- World[i][j].blockType="d"
-			-- World[i][j].x,World[i][j].y = i*85,screenH-j*85
-			-- physics.addBody(World[i][j],"static",{bounce=0})
 		end
 	end
 	print(#World)
@@ -111,9 +109,9 @@ function CreateWorld(worldArray)
 			--World[i][j]=nil
 			if type(tmpBlkType)~= "table"  then 
 			print("A::" .. tmpBlkType)
-			World[i][j]=display.newRect(0,0,85,85)
+			World[i][j]=display.newRect(0,0,blockSize,blockSize)
 			World[i][j].blockType=tmpBlkType
-			World[i][j].x,World[i][j].y = i*85,screenH-j*85
+			World[i][j].x,World[i][j].y = (i*blockSize)-blockSize/2,(screenH-j*blockSize)+blockSize/2
 			physics.addBody(World[i][j],"static",{bounce=0})
 			if World[i][j].blockType=="g" then
 				World[i][j]:setFillColor(0,1,0)
@@ -138,7 +136,6 @@ function SaveWorld()
 	else		
 		for i=1,#World do
 			for j=1,#World[i] do
-			--print("kajsdc" .. World[i][j].blockType)
 				file:write(World[i][j].blockType)
 			end
 			if i<#World then
@@ -158,18 +155,13 @@ function LoadWorld()
 		GenerateWorld()
 	else
 		World={}
-		for i=1,22 do
+		for i=1,levelWidth do
 			local line = file:read("*l")
 			if string.len(line) > 0 then
 				print(string.len(line))
 				World[i]={}
 				for j=1,string.len(line) do
-					-- World[i][j]=display.newRect(0,0,85,85)
-					-- World[i][j].blockType="d"
-					-- World[i][j].x,World[i][j].y = i*85,screenH-j*85
-					-- physics.addBody(World[i][j],"static",{bounce=0})
-					
-					World[i][j]=line:sub(j,j)--string.sub(
+					World[i][j]=line:sub(j,j)
 				end
 			end
 		end
@@ -255,9 +247,23 @@ function scene:create( event )
 	physics.addBody(player,"dynamic",{bounce=0})	
 	player.isFixedRotation=true	
 	player.gravityScale=3
+	player.x, player.y = blockSize/2,-#World[1]*blockSize+screenH
 	--pResetPhysics()
 	
-	sceneGroup:insert(player)
+	camera:add(player,1)
+	for i=1,#World do
+		for j=1,#World[i] do
+			camera:add(World[i][j],2)
+		end
+	end
+	
+	camera:setBounds(0,levelWidth*blockSize-screenW/2,-3300,screenH/2)
+	-- camera:setBounds(screenW/2,levelWidth*blockSize-screenW/2,-3300,screenH/2)
+	
+	camera.damping=10
+	camera:setFocus(player)
+	camera:track()
+	-- sceneGroup:insert(player)
 end
 
 
