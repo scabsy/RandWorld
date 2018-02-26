@@ -51,7 +51,7 @@ local WorldDisplay = {}
 local BlockTypes={"d","g","s"}
 local blockSize = 60
 local levelWidth = 1000
-local currentSection = 1
+local currentSection = 5
 local loadedSecCount = 3
 local sectionSize = 25
 
@@ -74,8 +74,8 @@ function pMove()
 		player.x = player.x + pSpeed
 	end
 	
-	local sectionRangeMin = (currentSection - 1) * sectionSize * blockSize - blockSize/2
-	local sectionRangeMax = (currentSection) * sectionSize * blockSize + blockSize/2
+	local sectionRangeMin = (currentSection - 1) * sectionSize * blockSize - blockSize
+	local sectionRangeMax = (currentSection) * sectionSize * blockSize + blockSize
 	
 	if player.x<sectionRangeMin then
 		currentSection = currentSection-1
@@ -124,6 +124,45 @@ function StopMovement()
 end
 
 -----------world
+--mining
+local mineTarget
+function mineBlock()
+	--local tBlock = e.target
+	if mineTarget ~= nil then
+		if mineTarget.durability>0 then
+			mineTarget.durability = mineTarget.durability - 1
+			if mineTarget.durability <= 0 then
+				mineTarget.isVisible=false
+				physics.removeBody(mineTarget)
+				mineTarget.blockType="c"
+				World[mineTarget.WorldLoc[1]][mineTarget.WorldLoc[2]]="c"
+				mineTarget:removeEventListener("touch",mineOnTouch)
+				Runtime:removeEventListener("enterFrame",mineBlock)
+			end
+		end
+	end
+end
+
+function mineOnTouch(e)	
+	if e.phase=="began" then
+		mineTarget=e.target
+		Runtime:addEventListener("enterFrame",mineBlock)
+	elseif e.phase=="moved" then
+		if e.target~=mineTarget then
+			Runtime:removeEventListener("enterFrame",mineBlock)
+			mineTarget=nil
+		end
+	elseif e.phase=="ended" then
+		Runtime:removeEventListener("enterFrame",mineBlock)
+		if mineTarget~=nil then
+			if mineTarget.blockType~="c" then
+				mineTarget.durability=100
+			end
+		end
+		mineTarget=nil
+	end
+end
+
 function GenerateWorld()
 	local height = 25
 	for i=1,levelWidth do
@@ -139,7 +178,9 @@ function GenerateWorld()
 	CreateWorld(World)
 end
 
-function CreateWorld(worldArray)	
+function CreateWorld(worldArray)
+
+	SaveWorld()	
 	-- for i=1,#World do
 	local wdNum = 1
 	for k,v in pairs(WorldDisplay) do
@@ -164,9 +205,15 @@ function CreateWorld(worldArray)
 			--World[i][j]=nil
 			if type(tmpBlkType)~= "table"  then 
 				WorldDisplay[wdNum][j]=display.newRect(0,0,blockSize,blockSize)
-				WorldDisplay[wdNum][j].blockType=tmpBlkType
 				WorldDisplay[wdNum][j].x,WorldDisplay[wdNum][j].y = (i*blockSize)-blockSize/2,(screenH-j*blockSize)+blockSize/2
-				physics.addBody(WorldDisplay[wdNum][j],"static",{bounce=0})
+				
+				if tmpBlkType~="c" then
+					physics.addBody(WorldDisplay[wdNum][j],"static",{bounce=0})
+				else
+					WorldDisplay[wdNum][j].alpha=0
+				end
+				
+				WorldDisplay[wdNum][j].blockType=tmpBlkType
 				if WorldDisplay[wdNum][j].blockType=="g" then
 					WorldDisplay[wdNum][j]:setFillColor(0,1,0)
 				elseif WorldDisplay[wdNum][j].blockType=="d" then
@@ -174,7 +221,11 @@ function CreateWorld(worldArray)
 				elseif WorldDisplay[wdNum][j].blockType=="s" then
 					WorldDisplay[wdNum][j]:setFillColor(.4,.4,.4)
 				end
+							
+				WorldDisplay[wdNum][j].WorldLoc = {i,j}
+				WorldDisplay[wdNum][j].durability=100
 				
+				WorldDisplay[wdNum][j]:addEventListener("touch",mineOnTouch)
 				camera:add(WorldDisplay[wdNum][j],2)
 			end
 		end
@@ -182,7 +233,6 @@ function CreateWorld(worldArray)
 		--print("end line")
 	end	
 	
-	SaveWorld()
 end
 
 function SaveWorld()
