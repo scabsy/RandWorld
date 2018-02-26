@@ -1,6 +1,7 @@
 -- TO DO
 -- ****************level loading
--- load section as player walks
+-- load section as player walks - mostly done
+--	-works with pre-generated level - not infinite
 -- save any changes from mining to file as player leave area
 
 -- ****************mining
@@ -35,10 +36,10 @@ local screenW, screenH, halfW = display.actualContentWidth, display.actualConten
 ----------------------------------------------------------------------------------------------------------------
 --player
 local pSize = 80
-local pSpeed = 5
-local pJumpHeight = -.7
+local pSpeed = 3
+local pJumpHeight = -.35
 
-local player=display.newRect(0,0,pSize*.7,pSize)
+local player=display.newRect(0,0,pSize*.4,pSize)
 player.anchorY=1
 player:setFillColor(1,0,0)
 player.posDirs = {"L","R"}
@@ -48,13 +49,18 @@ player.dir = ""
 local World={}
 local WorldDisplay = {}
 local BlockTypes={"d","g","s"}
-local blockSize = 84
-local levelWidth = 100
-local currentSection = 3
+local blockSize = 60
+local levelWidth = 1000
+local currentSection = 1
+local loadedSecCount = 3
 local sectionSize = 25
 
 --camera
 local camera = perspective.createView()
+
+--UI
+local memoryTxt
+local memory
 ----------------------------------------------------------------------------------------------------------------
 
 ----------------------------------SHARE FUNCTIONS---------------------------------------------------------------
@@ -66,6 +72,20 @@ function pMove()
 		player.x = player.x - pSpeed
 	elseif player.dir=="R" then
 		player.x = player.x + pSpeed
+	end
+	
+	local sectionRangeMin = (currentSection - 1) * sectionSize * blockSize - blockSize/2
+	local sectionRangeMax = (currentSection) * sectionSize * blockSize + blockSize/2
+	
+	if player.x<sectionRangeMin then
+		currentSection = currentSection-1
+		print("G")
+		CreateWorld()
+	end
+	if player.x>sectionRangeMax then
+		currentSection = currentSection+1
+		print("H")
+		CreateWorld()
 	end
 end
 
@@ -115,14 +135,29 @@ function GenerateWorld()
 			World[i][j]=blkType
 		end
 	end
-	print(#World)
+	--print(#World)
 	CreateWorld(World)
 end
 
 function CreateWorld(worldArray)	
 	-- for i=1,#World do
 	local wdNum = 1
-	for i=((currentSection-1)*sectionSize)+1,((currentSection-1)*sectionSize)+1+sectionSize do
+	for k,v in pairs(WorldDisplay) do
+		for i=1,#WorldDisplay[k] do
+			-- print(WorldDisplay[k][i].blockType)
+			camera:remove(WorldDisplay[k][i])
+			WorldDisplay[k][i]=nil
+		end
+	end
+	-- camera:layer(2) = {}
+	-- WorldDisplay=nil
+	-- WorldDisplay={}
+	local minSec = ((currentSection-2)*sectionSize)+1
+	local maxSec = ((currentSection)*sectionSize)+sectionSize
+	if minSec<1 then minSec=1 end
+	if maxSec>levelWidth then maxSec=levelWidth end
+	
+	for i=minSec,maxSec do
 		WorldDisplay[wdNum]={}
 		for j=1,#World[i] do
 			local tmpBlkType = World[i][j]
@@ -139,10 +174,12 @@ function CreateWorld(worldArray)
 				elseif WorldDisplay[wdNum][j].blockType=="s" then
 					WorldDisplay[wdNum][j]:setFillColor(.4,.4,.4)
 				end
+				
+				camera:add(WorldDisplay[wdNum][j],2)
 			end
 		end
 		wdNum = wdNum+1
-		print("end line")
+		--print("end line")
 	end	
 	
 	SaveWorld()
@@ -185,7 +222,7 @@ function LoadWorld()
 				-- end
 				
 				if string.len(line) > 0 then
-					print(string.len(line))
+					-- print(string.len(line))
 					World[i]={}
 					for j=1,string.len(line) do
 						World[i][j]=line:sub(j,j)
@@ -255,6 +292,12 @@ function sleep(n)  -- seconds
 	while clock() - t0 <= n do end
 end
 
+local maxMem = 0
+function ShowMemory()
+	memoryTxt=collectgarbage("count")
+	if memoryTxt> maxMem then maxMem=memoryTxt end
+	memory.text="System memory: " .. string.format("%.00f",maxMem) .. "KB"
+end
 -- function FollowPlayer()
 	-- scene
 -- end
@@ -279,16 +322,19 @@ function scene:create( event )
 	-- player.x, player.y = (sectionSize*currentSection*blockSize),-#World[1]*blockSize+screenH
 	--pResetPhysics()
 	
+	memory=display.newText("ASCASDC",screenW/2,100, native.systemFont,16)
+	memory:setFillColor(1,1,1)
+	
 	camera:add(player,1)
 	-- for i=1,#World do
-	for i=1,sectionSize do
-		for j=1,#WorldDisplay[i] do
-			camera:add(WorldDisplay[i][j],2)
-		end
-	end
+	-- for i=1,sectionSize do
+		-- for j=1,#WorldDisplay[i] do
+			-- camera:add(WorldDisplay[i][j],2)
+		-- end
+	-- end
 	
-	camera:setBounds(0,levelWidth*blockSize-screenW/2,-3300,screenH/2)
-	-- camera:setBounds(screenW/2,levelWidth*blockSize-screenW/2,-3300,screenH/2)
+	-- camera:setBounds(0,levelWidth*blockSize-screenW/2,-3300,screenH/2)
+	camera:setBounds(screenW/2,levelWidth*blockSize-screenW/2,-3300,screenH/2)
 	
 	camera.damping=10
 	camera:setFocus(player)
@@ -311,6 +357,7 @@ function scene:show( event )
 		physics.start()
 		
 		Runtime:addEventListener( "key", onKeyEvent )
+		Runtime:addEventListener( "enterFrame", ShowMemory )
 	end
 end
 
