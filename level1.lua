@@ -52,10 +52,10 @@ local BlockTypes={"d","g","s"}
 local blockSize = 60
 local currentSection = 5
 local loadedSecCount = 3
-local sectionSize = 25
+local sectionSize = 17
 
 
-local maxWorldWidth = 1024
+local maxWorldWidth = 1020
 local maxWorldHeight = 64
 --camera
 local camera = perspective.createView()
@@ -212,68 +212,52 @@ local wasPriButDown = false
 local wasSecButDown = false
 function mineOnTouch(e)	
 	mineTarget=e.target
-	if e.isPrimaryButtonDown then
-		if not wasPriButDown then
-			wasPriButDown = true
-			if mineTarget.blockType~="c" then
-				Runtime:addEventListener("enterFrame",mineBlock)
-			end
-		end
-	elseif not e.isPrimaryButtonDown then
-		wasPriButDown = false
-		
-		Runtime:removeEventListener("enterFrame",mineBlock)
-		if mineTarget~=nil then
-			if mineTarget.blockType~="c" then
-				mineTarget.durability=100
-				mineTarget.alpha=1
-			end
-		end
-	end
 	
-	if e.isSecondaryButtonDown then
-		if not wasSecButDown then
-			wasSecButDown = true
-			if mineTarget.blockType=="c" then
-				if GetPlayerGridLoc()[1]~=mineTarget.WorldLoc[1] or (GetPlayerGridLoc()[2]~=mineTarget.WorldLoc[2] and GetPlayerGridLoc()[2]+1~=mineTarget.WorldLoc[2]) then
-					SetBlock(mineTarget,"d")
+	local distToTargetX = mineTarget.WorldLoc[1] - GetPlayerGridLoc()[1]
+	local distToTargetY = mineTarget.WorldLoc[2] - GetPlayerGridLoc()[2]
+	
+	local distToTarget = math.sqrt((distToTargetX * distToTargetX) + (distToTargetY * distToTargetY))
+	
+	if distToTarget<2.5 then
+		if e.isPrimaryButtonDown then
+			if not wasPriButDown then
+				wasPriButDown = true
+				if mineTarget.blockType~="c" then
+					Runtime:addEventListener("enterFrame",mineBlock)
+				end
+			end
+		elseif not e.isPrimaryButtonDown then
+			wasPriButDown = false
+			
+			Runtime:removeEventListener("enterFrame",mineBlock)
+			if mineTarget~=nil then
+				if mineTarget.blockType~="c" then
+					mineTarget.durability=100
+					mineTarget.alpha=1
 				end
 			end
 		end
-	elseif not e.isSecondaryButtonDown then
-		wasSecButDown = false
-	end
-	
-	
-	-- if e.phase=="began" then
-		-- print("asc")
-		-- mineTarget=e.target
-		-- if e.isPrimaryButtonDown then
-			-- Runtime:addEventListener("enterFrame",mineBlock)
-		-- elseif e.isSecondaryButtonDown then
-			-- if GetPlayerGridLoc()[1]~=mineTarget.WorldLoc[1] or (GetPlayerGridLoc()[2]~=mineTarget.WorldLoc[2] and GetPlayerGridLoc()[2]+1~=mineTarget.WorldLoc[2]) then
-				-- SetBlock(mineTarget,"d")
-			-- end
-		-- end
 		
-	-- elseif e.phase=="moved" then
-		-- if e.target~=mineTarget then
-			-- Runtime:removeEventListener("enterFrame",mineBlock)
-			-- mineTarget=nil
-		-- end
-	-- elseif e.phase=="ended" then
-		-- Runtime:removeEventListener("enterFrame",mineBlock)
-		-- if mineTarget~=nil then
-			-- if mineTarget.blockType~="c" then
-				-- mineTarget.durability=100
-			-- end
-		-- end
-		-- mineTarget=nil
-	-- end
+		if e.isSecondaryButtonDown then
+			if not wasSecButDown then
+				wasSecButDown = true
+				if mineTarget.blockType=="c" then
+					if GetPlayerGridLoc()[1]~=mineTarget.WorldLoc[1] or (GetPlayerGridLoc()[2]~=mineTarget.WorldLoc[2] and GetPlayerGridLoc()[2]+1~=mineTarget.WorldLoc[2]) then
+						SetBlock(mineTarget,"d")
+					end
+				end
+			end
+		elseif not e.isSecondaryButtonDown then
+			wasSecButDown = false
+		end
+	
+	end
 end
 
 function GenerateWorld()
 	local height = maxWorldHeight/2+math.random(-5,5)
+	
+	--Generate base world
 	for i=1,maxWorldWidth do
 		World[i]={}
 		height=height + math.random(-2,2)
@@ -291,7 +275,7 @@ function GenerateWorld()
 		end		
 	end
 	
-	print(maxWorldWidth)
+	--set base block types
 	for i=1,maxWorldWidth do
 		local rowHeight = math.floor(World[i].height)
 		for j=1,rowHeight do
@@ -315,7 +299,25 @@ function GenerateWorld()
 			end
 		end
 	end
-	--print(#World)
+	
+	--generate caves
+	local maxCaveHeight = 6
+	local caveCount = math.random(10,20)
+	
+	for i=10,caveCount do		
+		local rowHeight = math.floor(World[i].height)
+		local caveStart = {math.random(1, maxWorldWidth),math.floor(rowHeight/2+math.random(-5,5))}
+		
+		for j=math.random(-maxCaveHeight,0),math.random(0,maxCaveHeight) do
+			for k=math.random(-maxCaveHeight,0),math.random(0,maxCaveHeight) do
+				if World[caveStart[1]+j][caveStart[2]+k]~="b" then
+					World[caveStart[1]+j][caveStart[2]+k]="c"
+				end
+			end
+		end
+		
+	end
+	
 	CreateWorld(World)
 end
 
@@ -340,16 +342,16 @@ function CreateWorld(worldArray)
 	if maxSec>maxWorldWidth then maxSec=maxWorldWidth end
 	
 	for i=minSec,maxSec do
-		WorldDisplay[wdNum]={}
+		WorldDisplay[wdNum-sectionSize]={}
 		for j=1,#World[i] do
 			local tmpBlkType = World[i][j]
 			--World[i][j]=nil
 			if type(tmpBlkType)~= "table"  then 
-				WorldDisplay[wdNum][j]=CreateBlock(tmpBlkType)
-				WorldDisplay[wdNum][j].x,WorldDisplay[wdNum][j].y = (i*blockSize)-blockSize/2,(-j*blockSize)+blockSize/2					
-				WorldDisplay[wdNum][j].WorldLoc = {i,j}
+				WorldDisplay[wdNum-sectionSize][j]=CreateBlock(tmpBlkType)
+				WorldDisplay[wdNum-sectionSize][j].x,WorldDisplay[wdNum-sectionSize][j].y = (i*blockSize)-blockSize/2,(-j*blockSize)+blockSize/2					
+				WorldDisplay[wdNum-sectionSize][j].WorldLoc = {i,j}
 				
-				camera:add(WorldDisplay[wdNum][j],2)
+				camera:add(WorldDisplay[wdNum-sectionSize][j],2)
 			end
 		end
 		wdNum = wdNum+1
