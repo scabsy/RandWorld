@@ -23,6 +23,14 @@ settings =
 			"android.permission.INTERNET",
 		},
 	},
+	
+	--
+	-- Windows section
+	--
+	window =
+    {
+        defaultMode = "fullscreen",
+    },  
 
 	--
 	-- iOS section
